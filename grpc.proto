@@ -1,0 +1,29 @@
+syntax = "proto3";
+option go_package = "main";
+
+service GrpcService {
+    rpc Greet (GreetRequest) returns (GreetResponse) {}
+}
+
+message GreetRequest {
+    string name = 1;
+}
+
+message GreetResponse {
+    string greeting = 1;
+}
+
+
+service GrpcStreamService {
+    rpc Greet (stream StreamGreetRequest) returns (stream StreamGreetResponse) {}
+}
+
+message StreamGreetRequest {
+    string id = 1;
+    string name = 2;
+}
+
+message StreamGreetResponse {
+    string id = 1;
+    string greeting = 2;
+}
