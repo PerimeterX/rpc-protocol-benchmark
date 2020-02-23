@@ -13,7 +13,7 @@ type redconTester struct {
 	client *redis.Client
 }
 
-func (r *redconTester) init() {
+func (r *redconTester) initServer() {
 	var e error
 	if r.lis, e = net.Listen("tcp", ":8080"); e != nil {
 		panic(fmt.Sprintf("coult not start redcon listener: %s", e.Error()))
@@ -23,30 +23,10 @@ func (r *redconTester) init() {
 			panic(fmt.Sprintf("could not start redcon server: %s", e.Error()))
 		}
 	}()
+}
+
+func (r *redconTester) initClient() {
 	r.client = redis.NewClient(&redis.Options{Addr: "localhost:8080"})
-}
-
-func handler(conn redcon.Conn, cmd redcon.Command) {
-	cmdName := strings.ToLower(string(cmd.Args[0]))
-	if cmdName != "greet" {
-		conn.WriteError(fmt.Sprintf("invalid cmd %s", cmdName))
-		return
-	}
-	name := strings.ToLower(string(cmd.Args[1]))
-	conn.WriteString(fmt.Sprintf("hello, %s", name))
-}
-func accept(_ redcon.Conn) bool {
-	return true
-}
-func closed(_ redcon.Conn, _ error) {}
-
-func (r *redconTester) close() {
-	if e := r.client.Close(); e != nil {
-		panic(fmt.Sprintf("could not close redcon client: %s", e.Error()))
-	}
-	if e := r.lis.Close(); e != nil {
-		panic(fmt.Sprintf("could not close redcon server: %s", e.Error()))
-	}
 }
 
 func (r *redconTester) doRPC(name string) {
@@ -62,3 +42,31 @@ func (r *redconTester) doRPC(name string) {
 		panic(fmt.Sprintf("wrong redcon answer: %s", data))
 	}
 }
+
+func (r *redconTester) closeClient() {
+	if e := r.client.Close(); e != nil {
+		panic(fmt.Sprintf("could not close redcon client: %s", e.Error()))
+	}
+}
+
+func (r *redconTester) closeServer() {
+	if e := r.lis.Close(); e != nil {
+		panic(fmt.Sprintf("could not close redcon server: %s", e.Error()))
+	}
+}
+
+func handler(conn redcon.Conn, cmd redcon.Command) {
+	cmdName := strings.ToLower(string(cmd.Args[0]))
+	if cmdName != "greet" {
+		conn.WriteError(fmt.Sprintf("invalid cmd %s", cmdName))
+		return
+	}
+	name := strings.ToLower(string(cmd.Args[1]))
+	conn.WriteString(fmt.Sprintf("hello, %s", name))
+}
+
+func accept(_ redcon.Conn) bool {
+	return true
+}
+
+func closed(_ redcon.Conn, _ error) {}

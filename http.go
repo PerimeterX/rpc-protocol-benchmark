@@ -12,7 +12,7 @@ type httpTester struct {
 	srv *http.Server
 }
 
-func (h *httpTester) init() {
+func (h *httpTester) initServer() {
 	h.srv = &http.Server{Addr: ":8080"}
 	http.HandleFunc("/greet", func(writer http.ResponseWriter, request *http.Request) {
 		if e := request.ParseForm(); e != nil {
@@ -31,12 +31,7 @@ func (h *httpTester) init() {
 	time.Sleep(time.Second)
 }
 
-func (h *httpTester) close() {
-	if e := h.srv.Close(); e != nil {
-		panic(fmt.Sprintf("could not stop http server: %v", e.Error()))
-	}
-	time.Sleep(time.Second)
-}
+func (h *httpTester) initClient() {}
 
 func (h *httpTester) doRPC(name string) {
 	resp, e := http.PostForm("http://localhost:8080/greet", url.Values{"name": {name}})
@@ -53,4 +48,13 @@ func (h *httpTester) doRPC(name string) {
 	if string(body) != fmt.Sprintf("hello, %s", name) {
 		panic(fmt.Sprintf("wrong http answer: %s", string(body)))
 	}
+}
+
+func (h *httpTester) closeClient() {}
+
+func (h *httpTester) closeServer() {
+	if e := h.srv.Close(); e != nil {
+		panic(fmt.Sprintf("could not stop http server: %v", e.Error()))
+	}
+	time.Sleep(time.Second)
 }

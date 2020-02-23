@@ -18,7 +18,7 @@ type grpcStreamTester struct {
 	stream    GrpcStreamService_GreetClient
 }
 
-func (g *grpcStreamTester) init() {
+func (g *grpcStreamTester) initServer() {
 	g.callbacks = make(map[string]func(*StreamGreetResponse))
 	lis, e := net.Listen("tcp", ":8080")
 	if e != nil {
@@ -32,6 +32,10 @@ func (g *grpcStreamTester) init() {
 			panic(fmt.Sprintf("could not start grpc stream server: %v", e.Error()))
 		}
 	}()
+}
+
+func (g *grpcStreamTester) initClient() {
+	var e error
 	if g.conn, e = grpc.Dial("localhost:8080", grpc.WithInsecure(), grpc.WithBlock()); e != nil {
 		panic(fmt.Sprintf("could not start grpc stream client: %v", e.Error()))
 	}
@@ -56,16 +60,6 @@ func (g *grpcStreamTester) init() {
 	}()
 }
 
-func (g *grpcStreamTester) close() {
-	if e := g.stream.CloseSend(); e != nil {
-		panic(fmt.Sprintf("could not close grpc stream: %v", e.Error()))
-	}
-	if e := g.conn.Close(); e != nil {
-		panic(fmt.Sprintf("could not close grpc stream client: %v", e.Error()))
-	}
-	g.s.Stop()
-}
-
 func (g *grpcStreamTester) doRPC(name string) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -84,6 +78,19 @@ func (g *grpcStreamTester) doRPC(name string) {
 		panic(fmt.Sprintf("grpc error: %s", e.Error()))
 	}
 	wg.Wait()
+}
+
+func (g *grpcStreamTester) closeClient() {
+	if e := g.stream.CloseSend(); e != nil {
+		panic(fmt.Sprintf("could not close grpc stream: %v", e.Error()))
+	}
+	if e := g.conn.Close(); e != nil {
+		panic(fmt.Sprintf("could not close grpc stream client: %v", e.Error()))
+	}
+}
+
+func (g *grpcStreamTester) closeServer() {
+	g.s.Stop()
 }
 
 type grpcStreamService struct{}

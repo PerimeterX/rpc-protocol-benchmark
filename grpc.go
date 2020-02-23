@@ -13,7 +13,7 @@ type grpcTester struct {
 	c    GrpcServiceClient
 }
 
-func (g *grpcTester) init() {
+func (g *grpcTester) initServer() {
 	lis, e := net.Listen("tcp", ":8080")
 	if e != nil {
 		panic(fmt.Sprintf("could not create grpc listener: %v", e.Error()))
@@ -26,18 +26,15 @@ func (g *grpcTester) init() {
 			panic(fmt.Sprintf("could not start grpc server: %v", e.Error()))
 		}
 	}()
+}
+
+func (g *grpcTester) initClient() {
+	var e error
 	g.conn, e = grpc.Dial("localhost:8080", grpc.WithInsecure(), grpc.WithBlock())
 	if e != nil {
 		panic(fmt.Sprintf("could not start grpc client: %v", e.Error()))
 	}
 	g.c = NewGrpcServiceClient(g.conn)
-}
-
-func (g *grpcTester) close() {
-	if e := g.conn.Close(); e != nil {
-		panic(fmt.Sprintf("could not close grpc client: %v", e.Error()))
-	}
-	g.s.Stop()
 }
 
 func (g *grpcTester) doRPC(name string) {
@@ -48,6 +45,16 @@ func (g *grpcTester) doRPC(name string) {
 	if r.Greeting != fmt.Sprintf("hello, %s", name) {
 		panic(fmt.Sprintf("wrong grpc answer: %s", r.Greeting))
 	}
+}
+
+func (g *grpcTester) closeClient() {
+	if e := g.conn.Close(); e != nil {
+		panic(fmt.Sprintf("could not close grpc client: %v", e.Error()))
+	}
+}
+
+func (g *grpcTester) closeServer() {
+	g.s.Stop()
 }
 
 type grpcService struct{}

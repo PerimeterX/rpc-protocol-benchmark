@@ -10,50 +10,62 @@ import (
 	"time"
 )
 
-const testSize = 10000
+const (
+	requestsPerSecond   = 100
+	testDurationSeconds = 20
+)
 
 type tester interface {
-	init()
-	close()
+	initServer()
+	initClient()
 	doRPC(name string)
+	closeClient()
+	closeServer()
 }
 
-var testers = map[string]tester{
-	"http":         &httpTester{},
-	"grpc":         &grpcTester{},
-	"grpc_stream":  &grpcStreamTester{},
-	"redconTester": &redconTester{},
+var testers = []struct {
+	name   string
+	tester tester
+}{
+	{name: "http", tester: &httpTester{}},
+	{name: "grpc", tester: &grpcTester{}},
+	{name: "grpc_stream", tester: &grpcStreamTester{}},
+	{name: "redcon", tester: &redconTester{}},
+	{name: "tcp", tester: &tcpTester{}},
 }
 
 func main() {
 	output := "test,quantile 0.0,quantile 0.5,quantile 0.9,quantile 1.0\n"
-	for name, t := range testers {
-		result := doTest(name, t)
-		output += fmt.Sprintf("%s,%s\n", name, strings.Join(result, ","))
+	for _, entry := range testers {
+		result := doTest(entry.name, entry.tester)
+		output += fmt.Sprintf("%s,%s\n", entry.name, strings.Join(result, ","))
 	}
 	fmt.Println(output)
 }
 
 func doTest(name string, t tester) []string {
 	fmt.Printf("starting %s\n", name)
-	t.init()
+	t.initServer()
+	t.initClient()
 	fmt.Printf("testing %s\n", name)
 	c := &calculator{}
 	wg := &sync.WaitGroup{}
-	for i := 0; i < testSize; i++ {
+	totalRequests := testDurationSeconds * requestsPerSecond
+	for i := 0; i < totalRequests; i++ {
 		wg.Add(1)
 		go doRPC(i, t, c, wg)
 	}
 	wg.Wait()
 	fmt.Printf("stopping %s\n", name)
-	t.close()
+	t.closeClient()
+	t.closeServer()
 	fmt.Printf("finished %s\n", name)
 	return c.quantiles()
 }
 
 func doRPC(i int, t tester, c *calculator, wg *sync.WaitGroup) {
-	delayMS := rand.Intn(5000)
-	time.Sleep(time.Duration(delayMS) * time.Millisecond)
+	waitTimeSeconds := rand.Intn(testDurationSeconds)
+	time.Sleep(time.Duration(waitTimeSeconds) * time.Second)
 	timer := c.timer()
 	t.doRPC(strconv.Itoa(i))
 	timer.done()
