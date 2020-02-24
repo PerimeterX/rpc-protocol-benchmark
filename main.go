@@ -12,7 +12,7 @@ import (
 
 const (
 	requestsPerSecond   = 100
-	testDurationSeconds = 20
+	testDurationSeconds = 60
 )
 
 type tester interface {
